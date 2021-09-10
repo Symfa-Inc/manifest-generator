@@ -1,10 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-type IManifestComponent = Omit<
-  IManifest,
-  'author' | 'license' | 'readme' | 'components'
-> & { path: string };
+type IManifestComponent = Omit<IManifest,
+  'author' | 'license' | 'readme' | 'components'> & { path: string };
 
 interface IManifest {
   description: string;
@@ -12,7 +10,7 @@ interface IManifest {
   name: string;
   title: string;
   version: string;
-
+  type: string;
   author: string;
   license: string;
   readme: string;
@@ -20,6 +18,7 @@ interface IManifest {
 }
 
 class PluginManifest {
+
   constructor(
     public name: string,
     public title: string,
@@ -29,13 +28,14 @@ class PluginManifest {
     public image: string,
     public author: string,
     public license: string,
+    public type: string,
     public components: ComponentManifest[] = []
   ) {
     if (!name) throw new Error(`PluginManifest: Name is not defined!`);
     if (!title) throw new Error(`PluginManifest => ${this.name}: Title is not defined!`);
     if (!version) throw new Error(`PluginManifest => ${this.name}: Version is not defined!`);
-    if (!description)
-      throw new Error(`PluginManifest => ${this.name}: Description is not defined!`);
+    if (!description) throw new Error(`PluginManifest => ${this.name}: Description is not defined!`);
+    if (!type) throw new Error(`PluginManifest => ${this.name}: Type is not defined!`);
     if (!readme) throw new Error(`PluginManifest => ${this.name}: Readme is not defined!`);
     if (!image) throw new Error(`PluginManifest => ${this.name}: Image is not defined!`);
     if (!author) throw new Error(`PluginManifest => ${this.name}: Author is not defined!`);
@@ -50,12 +50,14 @@ class ComponentManifest {
     public version: string,
     public description: string = 'Component',
     public path: string,
-    public image: string
+    public image: string,
+    public type: string
   ) {
     if (!name) throw new Error('ComponentManifest: Name is not defined!');
     if (!title) throw new Error(`ComponentManifest => ${this.name}: Title is not defined!`);
     if (!version) throw new Error(`ComponentManifest => ${this.name}: Version is not defined!`);
     if (!description) this.description = '';
+    if (!type) throw new Error(`ComponentManifest => ${this.name}: Type is not defined!`);
     if (!path) throw new Error(`ComponentManifest => ${this.name}: Path is not defined!`);
     if (path && !this.isHasExtension(path, '.ts')) throw new Error(`ComponentManifest => ${this.name}: Path doesn't have extension!`);
     if (path && !ensureDir(path)) throw new Error(`ComponentManifest => ${this.name}: File ${this.path} doesn't exist!`);
@@ -94,11 +96,7 @@ const isManifest = (dir: string): boolean => {
 };
 
 const ensureDir = (dir: string): boolean => {
-  if (fs.existsSync(dir)) {
-    return true;
-  } else {
-    return false;
-  }
+  return fs.existsSync(dir);
 };
 
 const readJson = (dir: string): string => {
@@ -119,23 +117,24 @@ const collectManifests = (dir: string): IManifest[] => {
       author,
       components,
       description,
+      type,
       image,
       license,
       name,
       readme,
       title,
-      version,
+      version
     }: IManifest = JSON.parse(readJson(manifest));
     const newComponentManifests = components.map(
       ({
-        description,
-        image,
-        name,
-        path,
-        version,
-        title,
-      }: IManifestComponent) =>
-        new ComponentManifest(name, title, version, description, path, image)
+         description,
+         image,
+         name,
+         path,
+         version,
+         title
+       }: IManifestComponent) =>
+        new ComponentManifest(name, title, version, description, path, image, type)
     );
     const newManifest = new PluginManifest(
       name,
@@ -146,6 +145,7 @@ const collectManifests = (dir: string): IManifest[] => {
       image,
       author,
       license,
+      type,
       newComponentManifests
     );
     collector.push(newManifest);
@@ -158,20 +158,15 @@ const createManifestJson = (collector: IManifest[], dir: string): void => {
     `${dir}/manifests.json`,
     JSON.stringify({ manifests: collector })
   );
-}
+};
 
-const createMarketplaceMap = (collector: IManifest[]): {[T: string]: string}[] => {
-  const components = collector.map(manifest => manifest.components).flat()
-  const componentsMap = components.reduce((acc: string, component, idx, array) => {
-    const isLastElement = idx + 1 === array.length;
-    if (!isLastElement) {
-      return acc + `"${component.name}": "${component.path}",`
-    } else {
-      return acc + `"${component.name}": "${component.path}"`
-    }
-  }, '')
-  return JSON.parse(`{${componentsMap}}`);
-}
+const createMarketplaceMap = (collector: IManifest[]): { [T: string]: string }[] => {
+  const components = collector.map(manifest => manifest.components).flat();
+  const componentsMap = components.reduce((acc: string[], component) => {
+    return [...acc, `"${component.name}": "${component.path}"`]
+  }, []);
+  return JSON.parse(`{${componentsMap.join(',')}}`);
+};
 
 module.exports.collectManifests = collectManifests;
 module.exports.createManifestJson = createManifestJson;
