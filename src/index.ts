@@ -3,8 +3,8 @@ import * as path from 'path';
 
 type IManifestComponent = Omit<
   IManifest,
-  'author' | 'license' | 'readme' | 'components'
-> & { path: string };
+  'author' | 'license' | 'readme' | 'components' | 'type'
+> & { path: string; backendName: string };
 
 interface IManifest {
   description: string;
@@ -12,6 +12,7 @@ interface IManifest {
   name: string;
   title: string;
   version: string;
+  type: string;
 
   author: string;
   license: string;
@@ -29,16 +30,28 @@ class PluginManifest {
     public image: string,
     public author: string,
     public license: string,
+    public type: string,
     public components: ComponentManifest[] = []
   ) {
     if (!name) throw new Error(`PluginManifest: Name is not defined!`);
-    if (!title) throw new Error(`PluginManifest => ${this.name}: Title is not defined!`);
-    if (!version) throw new Error(`PluginManifest => ${this.name}: Version is not defined!`);
+    if (!title)
+      throw new Error(`PluginManifest => ${this.name}: Title is not defined!`);
+    if (!version)
+      throw new Error(
+        `PluginManifest => ${this.name}: Version is not defined!`
+      );
     if (!description)
-      throw new Error(`PluginManifest => ${this.name}: Description is not defined!`);
-    if (!readme) throw new Error(`PluginManifest => ${this.name}: Readme is not defined!`);
-    if (!image) throw new Error(`PluginManifest => ${this.name}: Image is not defined!`);
-    if (!author) throw new Error(`PluginManifest => ${this.name}: Author is not defined!`);
+      throw new Error(
+        `PluginManifest => ${this.name}: Description is not defined!`
+      );
+    if (!readme)
+      throw new Error(`PluginManifest => ${this.name}: Readme is not defined!`);
+    if (!image)
+      throw new Error(`PluginManifest => ${this.name}: Image is not defined!`);
+    if (!author)
+      throw new Error(`PluginManifest => ${this.name}: Author is not defined!`);
+    if (!type) throw new Error(`PluginManifest: Type is not defined!`);
+
     if (!license) this.license = 'MIT';
   }
 }
@@ -50,17 +63,39 @@ class ComponentManifest {
     public version: string,
     public description: string = 'Component',
     public path: string,
-    public image: string
+    public image: string,
+    public backendName: string = 'empty'
   ) {
     if (!name) throw new Error('ComponentManifest: Name is not defined!');
-    if (!title) throw new Error(`ComponentManifest => ${this.name}: Title is not defined!`);
-    if (!version) throw new Error(`ComponentManifest => ${this.name}: Version is not defined!`);
+    if (!title)
+      throw new Error(
+        `ComponentManifest => ${this.name}: Title is not defined!`
+      );
+    if (!version)
+      throw new Error(
+        `ComponentManifest => ${this.name}: Version is not defined!`
+      );
     if (!description) this.description = '';
-    if (!path) throw new Error(`ComponentManifest => ${this.name}: Path is not defined!`);
-    if (path && !this.isHasExtension(path, '.ts')) throw new Error(`ComponentManifest => ${this.name}: Path doesn't have extension!`);
-    if (path && !ensureDir(path)) throw new Error(`ComponentManifest => ${this.name}: File ${this.path} doesn't exist!`);
-    if (!path) throw new Error(`ComponentManifest => ${this.name}: Path is not defined!`);
-    if (!image) throw new Error(`ComponentManifest => ${this.name}: Image is not defined!`);
+    if (!path)
+      throw new Error(
+        `ComponentManifest => ${this.name}: Path is not defined!`
+      );
+    if (path && !this.isHasExtension(path, '.ts'))
+      throw new Error(
+        `ComponentManifest => ${this.name}: Path doesn't have extension!`
+      );
+    if (path && !ensureDir(path))
+      throw new Error(
+        `ComponentManifest => ${this.name}: File ${this.path} doesn't exist!`
+      );
+    if (!path)
+      throw new Error(
+        `ComponentManifest => ${this.name}: Path is not defined!`
+      );
+    if (!image)
+      throw new Error(
+        `ComponentManifest => ${this.name}: Image is not defined!`
+      );
   }
 
   isHasExtension(path: string, ext: string): boolean {
@@ -107,7 +142,7 @@ const readJson = (dir: string): string => {
     return manifest.toString();
   } catch (error) {
     console.log(error);
-    throw new Error(error);
+    throw new Error(error as string);
   }
 };
 
@@ -125,6 +160,7 @@ const collectManifests = (dir: string): IManifest[] => {
       readme,
       title,
       version,
+      type
     }: IManifest = JSON.parse(readJson(manifest));
     const newComponentManifests = components.map(
       ({
@@ -134,8 +170,17 @@ const collectManifests = (dir: string): IManifest[] => {
         path,
         version,
         title,
+        backendName,
       }: IManifestComponent) =>
-        new ComponentManifest(name, title, version, description, path, image)
+        new ComponentManifest(
+          name,
+          title,
+          version,
+          description,
+          path,
+          image,
+          backendName
+        )
     );
     const newManifest = new PluginManifest(
       name,
@@ -146,6 +191,7 @@ const collectManifests = (dir: string): IManifest[] => {
       image,
       author,
       license,
+      type,
       newComponentManifests
     );
     collector.push(newManifest);
@@ -158,20 +204,25 @@ const createManifestJson = (collector: IManifest[], dir: string): void => {
     `${dir}/manifests.json`,
     JSON.stringify({ manifests: collector })
   );
-}
+};
 
-const createMarketplaceMap = (collector: IManifest[]): {[T: string]: string}[] => {
-  const components = collector.map(manifest => manifest.components).flat()
-  const componentsMap = components.reduce((acc: string, component, idx, array) => {
-    const isLastElement = idx + 1 === array.length;
-    if (!isLastElement) {
-      return acc + `"${component.name}": "${component.path}",`
-    } else {
-      return acc + `"${component.name}": "${component.path}"`
-    }
-  }, '')
+const createMarketplaceMap = (
+  collector: IManifest[]
+): { [T: string]: string }[] => {
+  const components = collector.map((manifest) => manifest.components).flat();
+  const componentsMap = components.reduce(
+    (acc: string, component, idx, array) => {
+      const isLastElement = idx + 1 === array.length;
+      if (!isLastElement) {
+        return acc + `"${component.name}": "${component.path}",`;
+      } else {
+        return acc + `"${component.name}": "${component.path}"`;
+      }
+    },
+    ''
+  );
   return JSON.parse(`{${componentsMap}}`);
-}
+};
 
 module.exports.collectManifests = collectManifests;
 module.exports.createManifestJson = createManifestJson;
