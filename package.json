@@ -1,6 +1,6 @@
 {
   "name": "@weksik/manifest-generator",
-  "version": "1.0.4",
+  "version": "1.0.6",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only index.ts",
