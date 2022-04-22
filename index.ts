@@ -37,7 +37,6 @@ class PluginManifest {
     if (!description)
       throw new Error(`PluginManifest => ${this.name}: Description is not defined!`);
     if (!readme) throw new Error(`PluginManifest => ${this.name}: Readme is not defined!`);
-    if (!image) throw new Error(`PluginManifest => ${this.name}: Image is not defined!`);
     if (!author) throw new Error(`PluginManifest => ${this.name}: Author is not defined!`);
     if (!license) this.license = 'MIT';
   }
@@ -60,7 +59,6 @@ class ComponentManifest {
     if (path && !this.isHasExtension(path, '.ts')) throw new Error(`ComponentManifest => ${this.name}: Path doesn't have extension!`);
     if (path && !ensureDir(path)) throw new Error(`ComponentManifest => ${this.name}: File ${this.path} doesn't exist!`);
     if (!path) throw new Error(`ComponentManifest => ${this.name}: Path is not defined!`);
-    if (!image) throw new Error(`ComponentManifest => ${this.name}: Image is not defined!`);
   }
 
   isHasExtension(path: string, ext: string): boolean {
