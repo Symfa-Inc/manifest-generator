@@ -47,7 +47,6 @@ class PluginManifest {
     if (!readme)
       throw new Error(`PluginManifest => ${this.name}: Readme is not defined!`);
     if (!image)
-      throw new Error(`PluginManifest => ${this.name}: Image is not defined!`);
     if (!author)
       throw new Error(`PluginManifest => ${this.name}: Author is not defined!`);
     if (!type) throw new Error(`PluginManifest: Type is not defined!`);
@@ -91,10 +90,6 @@ class ComponentManifest {
     if (!path)
       throw new Error(
         `ComponentManifest => ${this.name}: Path is not defined!`
-      );
-    if (!image)
-      throw new Error(
-        `ComponentManifest => ${this.name}: Image is not defined!`
       );
   }
 
